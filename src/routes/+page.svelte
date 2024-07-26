@@ -1,30 +1,84 @@
 <script lang='ts'>
     import type {PageData} from "./$types";
+    import type {IndexMonster} from "./+page";
+    import { page } from "$app/stores";
+    import { goto } from '$app/navigation';
     import {generations} from "./generations";
+    import Monster from "./Monster.svelte";
 
     export let data: PageData;
+
+    let form = {
+        searchString: ''
+    }
+
+    let  searchString = ''
+    $: selectedMonsters = data.monsters.filter((monster) => {
+        return monster.name.toLowerCase().includes(searchString.toLowerCase());
+    })
+
+    $: monsterId = $page.url.searchParams.get('monsterId') || '';
+    $: monster = data.monsters.find(monster => monster.id === monsterId);
+    $: monsterId2 = $page.url.searchParams.get('monsterId2') || '';
+    $: monster2 = data.monsters.find(monster => monster.id === monsterId2);
+    $: selectedGenerationId = $page.url.searchParams.get('generation_id') || '';
+
+    const updateSearchParams = (key: string, value: string) => {
+        const searchParams = new URLSearchParams($page.url.searchParams);
+        searchParams.set(key, value);
+        goto(`?${searchParams.toString()}`);
+    }
+
+    const submitSearch = (event: Event) => {
+        searchString = form.searchString;
+    }
+
 </script>
+
+{#if monster}
+<Monster 
+    monster={monster}
+    updateSearchParams={updateSearchParams}
+/>
+{/if}
+{#if monster2}
+<Monster 
+    monster={monster2}
+    updateSearchParams={updateSearchParams}
+/>
+{/if}
+
 
 
 <div class="generations">
+    <button 
+        class="generation"
+        class:active={selectedGenerationId == 'all'}
+        on:click={() => updateSearchParams('generation_id', 'all')}
+    >All</button>
     {#each generations as generation (generation.id)}
-        <div class="generation">{generation.main_region}</div>
+        <button 
+            class="generation"
+            class:active={selectedGenerationId === generation.id.toString()}
+            on:click={() => updateSearchParams('generation_id', generation.id.toString())}
+        >
+            {generation.main_region}
+        </button>
     {/each}
 </div>
 
+<form class="search-form" on:submit|preventDefault={submitSearch}>
+    <input class="search-field" type="text" bind:value={form.searchString} placeholder="Pokemon Name"/>
+    <input type="submit" value="Search">
+</form>
 
 <div class="monsters">
-    {#each data.monsters as monster (monster.id)}
-        <div class="monster">
-            <div class="monster-content">
-                <img src="{monster.image}" alt={monster.name}>
-                {monster.name}
-            </div>
-            <div class="monster-id">
-                {monster.id}
-            </div>
-
-        </div>
+    {#each selectedMonsters as monster (monster.id)}
+        <Monster 
+        monster={monster} 
+        updateSearchParams={updateSearchParams}
+        isInteractive={true}
+        />
     {/each}
 </div>
 
@@ -45,6 +99,12 @@
         border-radius: 6px;
         background-color: #f9f9f9;
         color: #333;
+        cursor: pointer;
+    }
+
+    .generation.active {
+        background-color: #707070;
+        color: white;
     }
 
     .generation:hover {
@@ -58,29 +118,25 @@
         justify-content: center;
     }
 
-    .monster-id {
-        position: absolute;
-        top: 8px;
-        left: 8px;
-        font-size: 0.8em;
-        color: #aaa;
+    .search-form input[type="text"] {
+        padding: 5px 10px;
+        border-radius: 5px;
+        width: 200px;
     }
 
-    .monster {
-        width: 100px;
-        margin: 10px;
-        padding: 10px;
-        position: relative;
-        background-color: #eee;
+    .search-form input[type="submit"] {
+        padding: 5px 10px;
+        border-radius: 5px;
+        margin-left: 10px;
+        background-color: #f9f9f9;
+        border: 1px solid #aaa;
+        cursor: pointer;
     }
 
-    .monster:hover {
-        background-color: #ddd;
-    }
-
-    .monster-content {
+    .search-form {
         display: flex;
-        flex-direction: column;
-        align-items: center;
+        justify-content: center;
+        margin: 20px 0;
     }
+
 </style>
